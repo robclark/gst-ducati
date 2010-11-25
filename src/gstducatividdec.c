@@ -449,6 +449,7 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
   Int32 err;
   gint i;
   GstBuffer *outbuf = NULL;
+  GstClockTime t;
 
   if (G_UNLIKELY (!self->engine)) {
     GST_ERROR_OBJECT (self, "no engine");
@@ -495,11 +496,12 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
     buf = NULL;
   }
 
-  //XXX t = mark (NULL);
+  t = gst_util_get_timestamp ();
   err = VIDDEC3_process (self->codec,
       self->inBufs, self->outBufs,
       self->inArgs, self->outArgs);
-  //XXX GST_DEBUG_OBJECT (self, "processed returned in: %dus", mark (&t));
+  GST_INFO_OBJECT (self, "processed returned in: %8dns",
+      (gint) (gst_util_get_timestamp () - t));
   if (err) {
     GST_ERROR_OBJECT (self, "process returned error: %d %08x",
         err, self->outArgs->extendedError);
