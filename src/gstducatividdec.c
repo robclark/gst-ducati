@@ -330,22 +330,18 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   }
   self->params->size = params_sz;
   self->params->maxFrameRate = 30000;
-  //h264, mpeg4:
-  //note mpeg4 and h263 are same..
   self->params->maxBitRate = 10000000;
+
   //vc1:
   //self->params->maxBitRate = 45000000;
+  //vc6/vc7/rv??
 
   self->params->dataEndianness = XDM_BYTE;
   self->params->forceChromaFormat = XDM_YUV_420SP;
   self->params->operatingMode = IVIDEO_DECODE_ONLY;
 
-  //mpeg4:
-  //self->params->displayDelay = IVIDDEC3_DISPLAY_DELAY_1;
-
   //vc1:
   //self->params->displayDelay = IVIDDEC3_DISPLAY_DELAY_1;
-
 
   self->params->displayBufsMode = IVIDDEC3_DISPLAYBUFS_EMBEDDED;
   self->params->inputDataMode = IVIDEO_ENTIREFRAME;
@@ -362,12 +358,6 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->params->metadataType[2] = IVIDEO_METADATAPLANE_NONE;
   self->params->errorInfoMode = IVIDEO_ERRORINFO_OFF;
 
-  //mpeg4:
-  //((IMPEG4VDEC_Params *) self->params)->outloopDeBlocking = 0;
-  //((IMPEG4VDEC_Params *) self->params)->sorensonSparkStream = 0;
-  //((IMPEG4VDEC_Params *) self->params)->ErrorConcealmentON = 1;
-
-
   /* allocate dynParams: */
   self->dynParams = dce_alloc (dynparams_sz);
   if (G_UNLIKELY (!self->dynParams)) {
@@ -378,9 +368,6 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->dynParams->displayWidth = 0;
   self->dynParams->frameSkipMode = IVIDEO_NO_SKIP;
   self->dynParams->newFrameFlag = XDAS_TRUE;
-
-  //mpeg4:
-  //self->dynParams->lateAcquireArg = IRES_HDVICP2_UNKNOWNLATEACQUIREARG;
 
   /* allocate status: */
   self->status = dce_alloc (status_sz);
@@ -406,15 +393,28 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->outArgs->size = outargs_sz;
 }
 
+static inline void
+push_input (GstDucatiVidDec * self, GstBuffer * buf)
+{
+  gint sz = GST_BUFFER_SIZE (buf);
+  GST_DEBUG_OBJECT (self, "push: %d bytes)", sz);
+  memcpy (self->input + self->in_size, GST_BUFFER_DATA (buf), sz);
+  self->in_size += sz;
+}
+
 static GstBuffer *
 gst_ducati_viddec_push_input (GstDucatiVidDec * self, GstBuffer * buf)
 {
+  gint sz;
+
+  if (self->first_in_buffer && self->codec_data) {
+    push_input (self, self->codec_data);
+  }
+
   /* just copy entire buffer */
-  self->inArgs->numBytes = GST_BUFFER_SIZE (buf);
-  self->inBufs->descs[0].bufSize.bytes = self->inArgs->numBytes;
-  GST_DEBUG_OBJECT (self, "push: %d bytes)", self->inArgs->numBytes);
-  memcpy (self->input, GST_BUFFER_DATA (buf), self->inArgs->numBytes);
+  push_input (self, buf);
   gst_buffer_unref (buf);
+
   return NULL;
 }
 
@@ -439,6 +439,7 @@ gst_ducati_viddec_set_caps (GstPad * pad, GstCaps * caps)
     if (gst_structure_get_int (s, "width", &width) &&
         gst_structure_get_int (s, "height", &height) &&
         gst_structure_get_fraction (s, "framerate", &frn, &frd)) {
+      const GValue *codec_data;
       GstCaps *outcaps;
 
       /* ok, these caps seem sane.. grab the required values and construct
@@ -447,6 +448,13 @@ gst_ducati_viddec_set_caps (GstPad * pad, GstCaps * caps)
       self->width = width;
       self->height = height;
       self->stride = 4096;      /* TODO: don't hardcode */
+
+      codec_data = gst_structure_get_value (s, "codec_data");
+      if (codec_data) {
+        GstBuffer *buffer = gst_value_get_buffer (codec_data);
+        GST_DEBUG_OBJECT (self, "codec_data: %" GST_PTR_FORMAT, buffer);
+        self->codec_data = gst_buffer_ref (buffer);
+      }
 
       /* update output/padded sizes:
        */
@@ -553,7 +561,10 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
     return GST_FLOW_ERROR;
   }
 
+  self->in_size = 0;
   buf = GST_DUCATIVIDDEC_GET_CLASS (self)->push_input (self, buf);
+  self->inArgs->numBytes = self->in_size;
+  self->inBufs->descs[0].bufSize.bytes = self->in_size;
 
   if (buf) {
     // XXX
@@ -658,6 +669,11 @@ gst_ducati_viddec_finalize (GObject * obj)
 
   codec_delete (self);
   engine_close (self);
+
+  if (self->codec_data) {
+      gst_buffer_unref (self->codec_data);
+      self->codec_data = NULL;
+  }
 
   G_OBJECT_CLASS (parent_class)->finalize (obj);
 }

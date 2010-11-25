@@ -65,11 +65,17 @@ struct _GstDucatiVidDec
   /* input buffer, allocated when codec is created: */
   guint8 *input;
 
+  /* number of bytes pushed to input on current frame: */
+  gint in_size;
+
   /* on first output buffer, we need to send crop info to sink.. and some
    * operations like flushing should be avoided if we haven't sent any
    * input buffers:
    */
   gboolean first_out_buffer, first_in_buffer;
+
+  /* by default, codec_data from sinkpad is prepended to first buffer: */
+  GstBuffer *codec_data;
 
   Engine_Handle           engine;
   VIDDEC3_Handle          codec;

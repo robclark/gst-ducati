@@ -101,7 +101,7 @@ gst_ducati_h264dec_base_init (gpointer gclass)
   gst_element_class_set_details_simple (element_class,
       "DucatiH264Dec",
       "Codec/Decoder/Video",
-      "Decodes video in H.264/AVC format with ducati",
+      "Decodes video in H.264/bytestream format with ducati",
       "Rob Clark <rob@ti.com>");
 
   gst_element_class_add_pad_template (element_class,
