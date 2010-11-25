@@ -1,0 +1,22 @@
+WHAT IT IS
+----------
+
+gst-ducati is a plugin for using the hw accellerated codecs on IVA-HD via the
+codec-engine API.  Uses the libdce (distributed codec-engine) library to
+use the codec on ducati.
+
+WHY IS IT?
+----------
+
+An OpenMAX-like API is provided by TI along with modified gst-openmax
+plugins.  So gst-ducati is not needed in that sense.  But libdce and this
+was an interesting project for me to try on my free time.
+
+TODO
+----
++ flush (for seek/eos)
++ mpeg4, vc1, vp6, vp7
++ fallbacks for sink elements not providing TILER buffers to decode into
++ search the code for XXX or TODO ;-)
+
+
