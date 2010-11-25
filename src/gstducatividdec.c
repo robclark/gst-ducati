@@ -148,7 +148,7 @@ codec_create (GstDucatiVidDec * self)
     return FALSE;
   }
 
-  err = VIDDEC3_control(self->codec, XDM_SETPARAMS, self->dynParams, self->status);
+  err = VIDDEC3_control (self->codec, XDM_SETPARAMS, self->dynParams, self->status);
   if (err) {
     GST_ERROR_OBJECT (self, "failed XDM_SETPARAMS");
     return FALSE;
@@ -163,7 +163,8 @@ codec_create (GstDucatiVidDec * self)
   }
 #endif
 
-  self->first_buffer = TRUE;
+  self->first_in_buffer = TRUE;
+  self->first_out_buffer = TRUE;
 
   /* allocate input buffer and initialize inBufs: */
   self->inBufs->numBufs = 1;
@@ -211,8 +212,8 @@ codec_prepare_outbuf (GstDucatiVidDec * self, GstBuffer * buf)
     // TODO
   }
 
-  self->outBufs->descs[0].buf = (XDAS_Int8 *)y_paddr;
-  self->outBufs->descs[1].buf = (XDAS_Int8 *)uv_paddr;
+  self->outBufs->descs[0].buf = (XDAS_Int8 *) y_paddr;
+  self->outBufs->descs[1].buf = (XDAS_Int8 *) uv_paddr;
 
   return (XDAS_Int32) buf;      // XXX use lookup table
 }
@@ -236,17 +237,83 @@ codec_unlock_outbuf (GstDucatiVidDec * self, XDAS_Int32 id)
   }
 }
 
-static gboolean
-codec_flush (GstDucatiVidDec * self)
+static gint
+codec_process (GstDucatiVidDec * self, gboolean send)
 {
+  gint err;
+  GstClockTime t;
+  GstBuffer *outbuf = NULL;
+  gint i;
+
+  t = gst_util_get_timestamp ();
+  err = VIDDEC3_process (self->codec,
+      self->inBufs, self->outBufs, self->inArgs, self->outArgs);
+  GST_INFO_OBJECT (self, "%10dns", (gint) (gst_util_get_timestamp () - t));
+  if (err) {
+    return err;
+  }
+
+  for (i = 0; self->outArgs->outputID[i]; i++) {
+    if (G_UNLIKELY (self->first_out_buffer) && send) {
+      /* send region of interest to sink on first buffer: */
+      XDM_Rect *r = &(self->outArgs->displayBufs.bufDesc[0].activeFrameRegion);
+
+      gst_pad_push_event (self->srcpad,
+          gst_event_new_crop (r->topLeft.y, r->topLeft.x,
+              r->bottomRight.x - r->topLeft.x,
+              r->bottomRight.y - r->topLeft.y));
+
+      self->first_out_buffer = FALSE;
+    }
+
+    outbuf = codec_get_outbuf (self, self->outArgs->outputID[i]);
+    if (send) {
+      gst_pad_push (self->srcpad, outbuf);
+    } else {
+      gst_buffer_unref (outbuf);
+    }
+  }
+
+  for (i = 0; self->outArgs->freeBufID[i]; i++) {
+    codec_unlock_outbuf (self, self->outArgs->freeBufID[i]);
+  }
+
+  return err;
+}
+
+/** call control(FLUSH), and then process() to pop out all buffers */
+static gboolean
+codec_flush (GstDucatiVidDec * self, gboolean eos)
+{
+  gint err;
+
+  GST_DEBUG_OBJECT (self, "flush: eos=%d", eos);
+
+  if (G_UNLIKELY (self->first_in_buffer)) {
+    return TRUE;
+  }
+
   if (G_UNLIKELY (!self->codec)) {
     GST_WARNING_OBJECT (self, "no codec");
     return TRUE;
   }
 
-  GST_WARNING_OBJECT (self, "TODO");
+  err = VIDDEC3_control (self->codec, XDM_FLUSH,
+      self->dynParams, self->status);
+  if (err) {
+    GST_ERROR_OBJECT (self, "failed XDM_FLUSH");
+    return FALSE;
+  }
 
-  return FALSE;
+  do {
+    err = codec_process (self, eos);
+  } while (err != XDM_EFAIL);
+
+  self->first_in_buffer = TRUE;
+
+  GST_DEBUG_OBJECT (self, "done");
+
+  return TRUE;
 }
 
 /* GstDucatiVidDec vmethod default implementations */
@@ -447,9 +514,7 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
   GstDucatiVidDec *self = GST_DUCATIVIDDEC (GST_OBJECT_PARENT (pad));
   GstFlowReturn ret;
   Int32 err;
-  gint i;
   GstBuffer *outbuf = NULL;
-  GstClockTime t;
 
   if (G_UNLIKELY (!self->engine)) {
     GST_ERROR_OBJECT (self, "no engine");
@@ -481,6 +546,7 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
   GST_BUFFER_TIMESTAMP (outbuf) = GST_BUFFER_TIMESTAMP (buf);
   GST_BUFFER_DURATION (outbuf) = GST_BUFFER_DURATION (buf);
 
+  /* pass new output buffer as to the decoder to decode into: */
   self->inArgs->inputID = codec_prepare_outbuf (self, outbuf);
   if (!self->inArgs->inputID) {
     GST_ERROR_OBJECT (self, "could not prepare output buffer");
@@ -496,39 +562,14 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
     buf = NULL;
   }
 
-  t = gst_util_get_timestamp ();
-  err = VIDDEC3_process (self->codec,
-      self->inBufs, self->outBufs,
-      self->inArgs, self->outArgs);
-  GST_INFO_OBJECT (self, "processed returned in: %8dns",
-      (gint) (gst_util_get_timestamp () - t));
+  err = codec_process (self, TRUE);
   if (err) {
     GST_ERROR_OBJECT (self, "process returned error: %d %08x",
         err, self->outArgs->extendedError);
     return GST_FLOW_ERROR;
   }
 
-  for (i = 0; self->outArgs->outputID[i]; i++) {
-    if (G_UNLIKELY (self->first_buffer)) {
-      /* send region of interest to sink on first buffer: */
-      XDM_Rect *r =
-          &(self->outArgs->displayBufs.bufDesc[0].activeFrameRegion);
-
-      gst_pad_push_event (self->srcpad,
-          gst_event_new_crop (r->topLeft.y, r->topLeft.x,
-              r->bottomRight.x - r->topLeft.x,
-              r->bottomRight.y - r->topLeft.y));
-
-      self->first_buffer = FALSE;
-    }
-
-    outbuf = codec_get_outbuf (self, self->outArgs->outputID[i]);
-    gst_pad_push (self->srcpad, outbuf);
-  }
-
-  for (i = 0; self->outArgs->freeBufID[i]; i++) {
-    codec_unlock_outbuf (self, self->outArgs->freeBufID[i]);
-  }
+  self->first_in_buffer = FALSE;
 
   if (self->outArgs->outBufsInUseFlag) {
     GST_WARNING_OBJECT (self, "TODO... outBufsInUseFlag");      // XXX
@@ -542,13 +583,16 @@ gst_ducati_viddec_event (GstPad * pad, GstEvent * event)
 {
   GstDucatiVidDec *self = GST_DUCATIVIDDEC (GST_OBJECT_PARENT (pad));
   gboolean ret = TRUE;
+  gboolean eos = FALSE;
 
   GST_INFO_OBJECT (self, "begin: event=%s", GST_EVENT_TYPE_NAME (event));
 
   switch (GST_EVENT_TYPE (event)) {
     case GST_EVENT_EOS:
+      eos = TRUE;
+      /* fall-through */
     case GST_EVENT_FLUSH_STOP:
-      if (!codec_flush (self)) {
+      if (!codec_flush (self, eos)) {
         GST_ERROR_OBJECT (self, "could not flush");
         return FALSE;
       }
