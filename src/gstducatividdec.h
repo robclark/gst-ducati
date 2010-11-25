@@ -65,6 +65,9 @@ struct _GstDucatiVidDec
   /* input buffer, allocated when codec is created: */
   guint8 *input;
 
+  /* on first output buffer, we need to send crop info to sink: */
+  gboolean first_buffer;
+
   Engine_Handle           engine;
   VIDDEC3_Handle          codec;
   VIDDEC3_Params         *params;

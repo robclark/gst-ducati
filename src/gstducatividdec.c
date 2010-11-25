@@ -163,6 +163,8 @@ codec_create (GstDucatiVidDec * self)
   }
 #endif
 
+  self->first_buffer = TRUE;
+
   /* allocate input buffer and initialize inBufs: */
   self->inBufs->numBufs = 1;
   self->input = gst_ducati_alloc_1d (self->width * self->height);
@@ -505,13 +507,18 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
   }
 
   for (i = 0; self->outArgs->outputID[i]; i++) {
-#if 0
-    /* calculate offset to region of interest */
-    XDM_Rect *r = &(outArgs->displayBufs.bufDesc[0].activeFrameRegion);
-    int yoff = (r->topLeft.y * 4096) + r->topLeft.x;
-    int uvoff = (r->topLeft.y * 4096 / 2) + r->topLeft.x;
-    // XXX do something..
-#endif
+    if (G_UNLIKELY (self->first_buffer)) {
+      /* send region of interest to sink on first buffer: */
+      XDM_Rect *r =
+          &(self->outArgs->displayBufs.bufDesc[0].activeFrameRegion);
+
+      gst_pad_push_event (self->srcpad,
+          gst_event_new_crop (r->topLeft.y, r->topLeft.x,
+              r->bottomRight.x - r->topLeft.x,
+              r->bottomRight.y - r->topLeft.y));
+
+      self->first_buffer = FALSE;
+    }
 
     outbuf = codec_get_outbuf (self, self->outArgs->outputID[i]);
     gst_pad_push (self->srcpad, outbuf);
