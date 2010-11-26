@@ -22,7 +22,7 @@ libdce (https://github.com/robclark/libdce) matching your kernel version.
 
 TODO
 ----
-+ vp7, realvideo
++ realvideo
 + fallbacks for sink elements not providing TILER buffers to decode into
 + search the code for XXX or TODO ;-)
 
