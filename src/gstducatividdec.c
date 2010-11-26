@@ -354,7 +354,7 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->params->maxFrameRate = 30000;
   self->params->maxBitRate = 10000000;
 
-  //vc6/vc7/rv??
+  //rv??
 
   self->params->dataEndianness = XDM_BYTE;
   self->params->forceChromaFormat = XDM_YUV_420SP;
@@ -365,10 +365,6 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->params->outputDataMode = IVIDEO_ENTIREFRAME;
   self->params->numInputDataUnits = 0;
   self->params->numOutputDataUnits = 0;
-
-  //vp6, vp7:
-  //self->params->numInputDataUnits = 1;
-  //self->params->numOutputDataUnits = 1;
 
   self->params->metadataType[0] = IVIDEO_METADATAPLANE_NONE;
   self->params->metadataType[1] = IVIDEO_METADATAPLANE_NONE;
