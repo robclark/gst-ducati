@@ -319,6 +319,28 @@ codec_flush (GstDucatiVidDec * self, gboolean eos)
 /* GstDucatiVidDec vmethod default implementations */
 
 static gboolean
+gst_ducati_viddec_parse_caps (GstDucatiVidDec * self, GstStructure * s)
+{
+  const GValue *codec_data;
+
+  if (gst_structure_get_int (s, "width", &self->width) &&
+      gst_structure_get_int (s, "height", &self->height)) {
+
+    const GValue *codec_data = gst_structure_get_value (s, "codec_data");
+
+    if (codec_data) {
+      GstBuffer *buffer = gst_value_get_buffer (codec_data);
+      GST_DEBUG_OBJECT (self, "codec_data: %" GST_PTR_FORMAT, buffer);
+      self->codec_data = gst_buffer_ref (buffer);
+    }
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
 gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
     gint dynparams_sz, gint status_sz, gint inargs_sz, gint outargs_sz)
 {
@@ -332,16 +354,11 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->params->maxFrameRate = 30000;
   self->params->maxBitRate = 10000000;
 
-  //vc1:
-  //self->params->maxBitRate = 45000000;
   //vc6/vc7/rv??
 
   self->params->dataEndianness = XDM_BYTE;
   self->params->forceChromaFormat = XDM_YUV_420SP;
   self->params->operatingMode = IVIDEO_DECODE_ONLY;
-
-  //vc1:
-  //self->params->displayDelay = IVIDDEC3_DISPLAY_DELAY_1;
 
   self->params->displayBufsMode = IVIDDEC3_DISPLAYBUFS_EMBEDDED;
   self->params->inputDataMode = IVIDEO_ENTIREFRAME;
@@ -393,26 +410,16 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->outArgs->size = outargs_sz;
 }
 
-static inline void
-push_input (GstDucatiVidDec * self, GstBuffer * buf)
-{
-  gint sz = GST_BUFFER_SIZE (buf);
-  GST_DEBUG_OBJECT (self, "push: %d bytes)", sz);
-  memcpy (self->input + self->in_size, GST_BUFFER_DATA (buf), sz);
-  self->in_size += sz;
-}
-
 static GstBuffer *
 gst_ducati_viddec_push_input (GstDucatiVidDec * self, GstBuffer * buf)
 {
-  gint sz;
-
-  if (self->first_in_buffer && self->codec_data) {
-    push_input (self, self->codec_data);
+  if (G_UNLIKELY (self->first_in_buffer) && self->codec_data) {
+    push_input (self, GST_BUFFER_DATA (self->codec_data),
+        GST_BUFFER_SIZE (self->codec_data));
   }
 
   /* just copy entire buffer */
-  push_input (self, buf);
+  push_input (self, GST_BUFFER_DATA (buf), GST_BUFFER_SIZE (buf));
   gst_buffer_unref (buf);
 
   return NULL;
@@ -425,6 +432,7 @@ gst_ducati_viddec_set_caps (GstPad * pad, GstCaps * caps)
 {
   gboolean ret = TRUE;
   GstDucatiVidDec *self = GST_DUCATIVIDDEC (gst_pad_get_parent (pad));
+  GstDucatiVidDecClass *klass = GST_DUCATIVIDDEC_GET_CLASS (self);
   GstStructure *s;
 
   g_return_val_if_fail (caps, FALSE);
@@ -433,32 +441,19 @@ gst_ducati_viddec_set_caps (GstPad * pad, GstCaps * caps)
   s = gst_caps_get_structure (caps, 0);
 
   if (pad == self->sinkpad) {
-    gint width, height, frn, frd;
+    gint frn = 0, frd = 1;
     GST_INFO_OBJECT (self, "setcaps (sink): %" GST_PTR_FORMAT, caps);
 
-    if (gst_structure_get_int (s, "width", &width) &&
-        gst_structure_get_int (s, "height", &height) &&
-        gst_structure_get_fraction (s, "framerate", &frn, &frd)) {
-      const GValue *codec_data;
+    if (klass->parse_caps (self, s)) {
       GstCaps *outcaps;
 
-      /* ok, these caps seem sane.. grab the required values and construct
-       * appropriate output caps
-       */
-      self->width = width;
-      self->height = height;
-      self->stride = 4096;      /* TODO: don't hardcode */
+      gst_structure_get_fraction (s, "framerate", &frn, &frd);
 
-      codec_data = gst_structure_get_value (s, "codec_data");
-      if (codec_data) {
-        GstBuffer *buffer = gst_value_get_buffer (codec_data);
-        GST_DEBUG_OBJECT (self, "codec_data: %" GST_PTR_FORMAT, buffer);
-        self->codec_data = gst_buffer_ref (buffer);
-      }
+      self->stride = 4096;      /* TODO: don't hardcode */
 
       /* update output/padded sizes:
        */
-      GST_DUCATIVIDDEC_GET_CLASS (self)->update_buffer_size (self);
+      klass->update_buffer_size (self);
 
       self->outsize =
           GST_ROUND_UP_2 (self->stride * self->padded_height * 3) / 2;
@@ -539,7 +534,6 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
     /* TODO: if we had our own buffer class, we could allocate our own
      * output buffer from TILER...
      */
- GST_WARNING_OBJECT (self, "ret=%d", ret);
     GST_WARNING_OBJECT (self, "TODO: allocate output TILER buffer");
     return ret;
   }
@@ -696,6 +690,8 @@ gst_ducati_viddec_class_init (GstDucatiVidDecClass * klass)
   gobject_class->finalize = gst_ducati_viddec_finalize;
   gstelement_class->change_state = gst_ducati_viddec_change_state;
 
+  klass->parse_caps =
+      GST_DEBUG_FUNCPTR (gst_ducati_viddec_parse_caps);
   klass->allocate_params =
       GST_DEBUG_FUNCPTR (gst_ducati_viddec_allocate_params);
   klass->push_input =

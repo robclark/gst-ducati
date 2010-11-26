@@ -70,7 +70,7 @@ static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
         )
     );
 
-/* GstDucatiVideDec vmethod implementations */
+/* GstDucatiVidDec vmethod implementations */
 
 static void
 gst_ducati_mpeg4dec_update_buffer_size (GstDucatiVidDec * self)

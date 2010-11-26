@@ -25,6 +25,7 @@
 
 #include "gstducatih264dec.h"
 #include "gstducatimpeg4dec.h"
+#include "gstducativc1dec.h"
 
 GST_DEBUG_CATEGORY (gst_ducati_debug);
 
@@ -33,8 +34,12 @@ plugin_init (GstPlugin * plugin)
 {
   GST_DEBUG_CATEGORY_INIT (gst_ducati_debug, "ducati", 0, "ducati");
 
+  /* TODO .. find some way to reasonably detect if the corresponding
+   * codecs are actually available..
+   */
   return gst_element_register (plugin, "ducatih264dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIH264DEC) &&
-      gst_element_register (plugin, "ducatimpeg4dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIMPEG4DEC);
+      gst_element_register (plugin, "ducatimpeg4dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIMPEG4DEC) &&
+      gst_element_register (plugin, "ducativc1dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIVC1DEC);
 }
 
 void *

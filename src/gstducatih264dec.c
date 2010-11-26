@@ -58,7 +58,7 @@ static GstStaticPadTemplate sink_factory = GST_STATIC_PAD_TEMPLATE ("sink",
         "framerate = (fraction)[ 0, max ];")
     );
 
-/* GstDucatiVideDec vmethod implementations */
+/* GstDucatiVidDec vmethod implementations */
 
 static void
 gst_ducati_h264dec_update_buffer_size (GstDucatiVidDec * self)

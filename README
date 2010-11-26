@@ -14,7 +14,7 @@ was an interesting project for me to try on my free time.
 
 TODO
 ----
-+ vc1, vp6, vp7, realvideo
++ vp6, vp7, realvideo
 + fallbacks for sink elements not providing TILER buffers to decode into
 + search the code for XXX or TODO ;-)
 

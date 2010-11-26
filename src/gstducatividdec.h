@@ -95,11 +95,21 @@ struct _GstDucatiVidDecClass
   const gchar *codec_name;
 
   /**
+   * Parse codec specific fields the given caps structure.  The base-
+   * class implementation of this method handles standard stuff like
+   * width/height/framerate/codec_data.
+   */
+  gboolean (*parse_caps) (GstDucatiVidDec * self, GstStructure * s);
+
+  /**
    * Called when the input buffer size changes, to recalculate codec required
    * output buffer size and minimum count
    */
   void (*update_buffer_size) (GstDucatiVidDec * self);
 
+  /**
+   * Called to allocate/initialize  params/dynParams/status/inArgs/outArgs
+   */
   gboolean (*allocate_params) (GstDucatiVidDec * self, gint params_sz,
       gint dynparams_sz, gint status_sz, gint inargs_sz, gint outargs_sz);
 
@@ -111,6 +121,16 @@ struct _GstDucatiVidDecClass
 };
 
 GType gst_ducati_viddec_get_type (void);
+
+/* helper methods for derived classes: */
+
+static inline void
+push_input (GstDucatiVidDec * self, guint8 *in, gint sz)
+{
+  GST_DEBUG_OBJECT (self, "push: %d bytes)", sz);
+  memcpy (self->input + self->in_size, in, sz);
+  self->in_size += sz;
+}
 
 G_END_DECLS
 
