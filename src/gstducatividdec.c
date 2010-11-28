@@ -110,8 +110,7 @@ static void
 codec_delete (GstDucatiVidDec * self)
 {
   if (self->codec) {
-    //XXX this crashes ducati:
-    //VIDDEC3_delete(self->codec);
+    VIDDEC3_delete(self->codec);
     self->codec = NULL;
   }
 
