@@ -96,7 +96,6 @@ gst_ducati_vp6dec_allocate_params (GstDucatiVidDec * self, gint params_sz,
 static GstBuffer *
 gst_ducati_vp6dec_push_input (GstDucatiVidDec * vdec, GstBuffer * buf)
 {
-  GstDucatiVP6Dec *self = GST_DUCATIVP6DEC (vdec);
   guint32 sz;
 
   if (G_UNLIKELY (vdec->first_in_buffer) && vdec->codec_data) {
