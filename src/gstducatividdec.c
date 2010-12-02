@@ -237,7 +237,7 @@ codec_unlock_outbuf (GstDucatiVidDec * self, XDAS_Int32 id)
 }
 
 static gint
-codec_process (GstDucatiVidDec * self, gboolean send)
+codec_process (GstDucatiVidDec * self, gboolean send, gboolean flush)
 {
   gint err;
   GstClockTime t;
@@ -249,13 +249,22 @@ codec_process (GstDucatiVidDec * self, gboolean send)
       self->inBufs, self->outBufs, self->inArgs, self->outArgs);
   GST_INFO_OBJECT (self, "%10dns", (gint) (gst_util_get_timestamp () - t));
   if (err) {
-    return err;
+    if (XDM_ISFATALERROR (self->outArgs->extendedError) || flush) {
+      return err;
+    }
+    /* we are processing for display and it is a non-fatal error, so lets
+     * try to recover..
+     */
+    err = XDM_EOK;
   }
 
   for (i = 0; self->outArgs->outputID[i]; i++) {
     if (G_UNLIKELY (self->first_out_buffer) && send) {
       /* send region of interest to sink on first buffer: */
       XDM_Rect *r = &(self->outArgs->displayBufs.bufDesc[0].activeFrameRegion);
+
+      GST_DEBUG_OBJECT (self, "setting crop to %d, %d, %d, %d",
+          r->topLeft.x, r->topLeft.y, r->bottomRight.x, r->bottomRight.y);
 
       gst_pad_push_event (self->srcpad,
           gst_event_new_crop (r->topLeft.y, r->topLeft.x,
@@ -267,6 +276,8 @@ codec_process (GstDucatiVidDec * self, gboolean send)
 
     outbuf = codec_get_outbuf (self, self->outArgs->outputID[i]);
     if (send) {
+      GST_DEBUG_OBJECT (self, "got buffer: %d %p (%" GST_TIME_FORMAT ")",
+          i, outbuf, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (outbuf)));
       gst_pad_push (self->srcpad, outbuf);
     } else {
       gst_buffer_unref (outbuf);
@@ -305,7 +316,7 @@ codec_flush (GstDucatiVidDec * self, gboolean eos)
   }
 
   do {
-    err = codec_process (self, eos);
+    err = codec_process (self, eos, TRUE);
   } while (err != XDM_EFAIL);
 
   self->first_in_buffer = TRUE;
@@ -562,7 +573,7 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
     buf = NULL;
   }
 
-  err = codec_process (self, TRUE);
+  err = codec_process (self, TRUE, FALSE);
   if (err) {
     GST_ERROR_OBJECT (self, "process returned error: %d %08x",
         err, self->outArgs->extendedError);
