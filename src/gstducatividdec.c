@@ -452,10 +452,13 @@ gst_ducati_viddec_set_caps (GstPad * pad, GstCaps * caps)
 
     if (klass->parse_caps (self, s)) {
       GstCaps *outcaps;
+      gboolean interlaced = FALSE;
 
       gst_structure_get_fraction (s, "framerate", &frn, &frd);
 
       self->stride = 4096;      /* TODO: don't hardcode */
+
+      gst_structure_get_boolean (s, "interlaced", &interlaced);
 
       /* update output/padded sizes:
        */
@@ -471,6 +474,10 @@ gst_ducati_viddec_set_caps (GstPad * pad, GstCaps * caps)
           "height", G_TYPE_INT, self->padded_height,
           "framerate", GST_TYPE_FRACTION, frn, frd,
           NULL);
+
+      if (interlaced) {
+        gst_caps_set_simple (outcaps, "interlaced", G_TYPE_BOOLEAN, TRUE, NULL);
+      }
 
       GST_DEBUG_OBJECT (self, "outcaps: %" GST_PTR_FORMAT, outcaps);
 
