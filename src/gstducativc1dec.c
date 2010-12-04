@@ -100,8 +100,8 @@ gst_ducati_vc1dec_update_buffer_size (GstDucatiVidDec * self)
   gint h = self->height;
 
   /* calculate output buffer parameters: */
-  self->padded_width = (w + (2 * PADX) + 0x7f) & ~0x7f;
-  self->padded_height = (((h / 2 + 0xf) & ~0xf) * 2) + 2 * PADY;
+  self->padded_width = ALIGN2 (w + (2 * PADX), 7);
+  self->padded_height = (ALIGN2 (h / 2, 4) * 2) + 2 * PADY;
   self->min_buffers = 8;
 }
 

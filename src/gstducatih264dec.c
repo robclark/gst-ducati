@@ -67,7 +67,7 @@ gst_ducati_h264dec_update_buffer_size (GstDucatiVidDec * self)
   gint h = self->height;
 
   /* calculate output buffer parameters: */
-  self->padded_width = (w + (2 * PADX) + 127) & 0xFFFFFF80;
+  self->padded_width = ALIGN2 (w + (2 * PADX), 7);
   self->padded_height = h + 4 * PADY;
   self->min_buffers = MIN (16, 32768 / ((w / 16) * (h / 16))) + 3;
 }

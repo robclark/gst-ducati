@@ -79,7 +79,7 @@ gst_ducati_mpeg4dec_update_buffer_size (GstDucatiVidDec * self)
   gint h = self->height;
 
   /* calculate output buffer parameters: */
-  self->padded_width = (w + PADX + 0x7f) & ~0x7f;
+  self->padded_width = ALIGN2 (w + PADX, 7);
   self->padded_height = h + PADY;
   self->min_buffers = 8;
 }
