@@ -23,6 +23,7 @@
 
 #include <gst/gst.h>
 
+#include "gstducati.h"
 #include "gstducatih264dec.h"
 #include "gstducatimpeg4dec.h"
 #include "gstducatimpeg2dec.h"
@@ -59,22 +60,27 @@ gst_ducati_alloc_1d (gint sz)
 }
 
 void *
-gst_ducati_alloc_2d (gint width, gint height)
+gst_ducati_alloc_2d (gint width, gint height, guint * sz)
 {
   MemAllocBlock block[] = { {
           .pixelFormat = PIXEL_FMT_8BIT,
           .dim = {.area = {
                       .width = width,
-                      .height = height,
-                  }}
+                      .height = ALIGN2 (height, 1),
+                  }},
+          .stride = 4096
       }, {
         .pixelFormat = PIXEL_FMT_16BIT,
         .dim = {.area = {
                     .width = width,
-                    .height = height / 2,
-                }}
+                    .height = ALIGN2 (height, 1) / 2,
+                }},
+        .stride = 4096
       }
   };
+  if (sz) {
+    *sz = (4096 * ALIGN2 (height, 1) * 3) / 2;
+  }
   return MemMgr_Alloc (block, 2);
 }
 

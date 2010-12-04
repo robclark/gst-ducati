@@ -9,6 +9,7 @@ noinst_HEADERS = \
 	gstducatimpeg4dec.h \
 	gstducatih264dec.h \
 	gstducatividdec.h \
+	gstducatibufferpool.h \
 	gstducati.h
 
 # sources used to compile this plug-in
@@ -20,6 +21,7 @@ libgstducati_la_SOURCES = \
 	gstducatimpeg4dec.c \
 	gstducatih264dec.c \
 	gstducatividdec.c \
+	gstducatibufferpool.c \
 	gstducati.c \
 	$(noinst_HEADERS)
 

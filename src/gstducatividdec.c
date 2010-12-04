@@ -109,6 +109,11 @@ engine_open (GstDucatiVidDec * self)
 static void
 codec_delete (GstDucatiVidDec * self)
 {
+  if (self->pool) {
+    gst_ducati_bufferpool_destroy (self->pool);
+    self->pool = NULL;
+  }
+
   if (self->codec) {
     VIDDEC3_delete(self->codec);
     self->codec = NULL;
@@ -174,6 +179,17 @@ codec_create (GstDucatiVidDec * self)
   return TRUE;
 }
 
+static inline GstBuffer *
+codec_bufferpool_get (GstDucatiVidDec * self, GstBuffer * buf)
+{
+  if (G_UNLIKELY (!self->pool)) {
+    GST_DEBUG_OBJECT (self, "creating bufferpool");
+    self->pool = gst_ducati_bufferpool_new (GST_ELEMENT (self),
+        GST_PAD_CAPS (self->srcpad));
+  }
+  return GST_BUFFER (gst_ducati_bufferpool_get (self->pool, buf));
+}
+
 static XDAS_Int32
 codec_prepare_outbuf (GstDucatiVidDec * self, GstBuffer * buf)
 {
@@ -191,7 +207,8 @@ codec_prepare_outbuf (GstDucatiVidDec * self, GstBuffer * buf)
   uv_type = gst_ducati_get_mem_type (uv_paddr);
 
   if ((y_type < 0) || (uv_type < 0)) {
-    return 0;
+    GST_DEBUG_OBJECT (self, "non TILER buffer, fallback to bufferpool");
+    return codec_prepare_outbuf (self, codec_bufferpool_get (self, buf));
   }
 
   if (!self->outBufs->numBufs) {
@@ -208,7 +225,11 @@ codec_prepare_outbuf (GstDucatiVidDec * self, GstBuffer * buf)
     /* verify output buffer type matches what we've already given
      * to the codec
      */
-    // TODO
+    if ((self->outBufs->descs[0].memType != y_type) ||
+        (self->outBufs->descs[1].memType != uv_type)) {
+      GST_DEBUG_OBJECT (self, "buffer mismatch, fallback to bufferpool");
+      return codec_prepare_outbuf (self, codec_bufferpool_get (self, buf));
+    }
   }
 
   self->outBufs->descs[0].buf = (XDAS_Int8 *) y_paddr;
@@ -276,6 +297,9 @@ codec_process (GstDucatiVidDec * self, gboolean send, gboolean flush)
 
     outbuf = codec_get_outbuf (self, self->outArgs->outputID[i]);
     if (send) {
+      if (GST_IS_DUCATIBUFFER (outbuf)) {
+        outbuf = gst_ducati_buffer_get (GST_DUCATIBUFFER (outbuf));
+      }
       GST_DEBUG_OBJECT (self, "got buffer: %d %p (%" GST_TIME_FORMAT ")",
           i, outbuf, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (outbuf)));
       gst_pad_push (self->srcpad, outbuf);
@@ -544,11 +568,8 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
       GST_PAD_CAPS (self->srcpad), &outbuf);
 
   if (ret != GST_FLOW_OK) {
-    /* TODO: if we had our own buffer class, we could allocate our own
-     * output buffer from TILER...
-     */
-    GST_WARNING_OBJECT (self, "TODO: allocate output TILER buffer");
-    return ret;
+    outbuf = codec_bufferpool_get (self, NULL);
+    ret = GST_FLOW_OK;
   }
 
   if (G_UNLIKELY (!self->codec)) {

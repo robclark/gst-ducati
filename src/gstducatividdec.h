@@ -23,6 +23,7 @@
 #include <gst/gst.h>
 
 #include "gstducati.h"
+#include "gstducatibufferpool.h"
 
 
 G_BEGIN_DECLS
@@ -46,6 +47,8 @@ struct _GstDucatiVidDec
   GstElement parent;
 
   GstPad *sinkpad, *srcpad;
+
+  GstDucatiBufferPool *pool;
 
   /* minimum output size required by the codec: */
   gint outsize;

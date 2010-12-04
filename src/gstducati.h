@@ -42,7 +42,7 @@ GST_DEBUG_CATEGORY_EXTERN (gst_ducati_debug);
 #define ALIGN2(x,n)   (((x) + ((1 << (n)) - 1)) & ~((1 << (n)) - 1))
 
 void * gst_ducati_alloc_1d (gint sz);
-void * gst_ducati_alloc_2d (gint width, gint height);
+void * gst_ducati_alloc_2d (gint width, gint height, guint * sz);
 XDAS_Int16 gst_ducati_get_mem_type (SSPtr paddr);
 
 G_END_DECLS
