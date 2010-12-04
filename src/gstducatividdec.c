@@ -563,6 +563,13 @@ gst_ducati_viddec_chain (GstPad * pad, GstBuffer * buf)
 
   self->in_size = 0;
   buf = GST_DUCATIVIDDEC_GET_CLASS (self)->push_input (self, buf);
+
+  if (self->in_size == 0) {
+    GST_DEBUG_OBJECT (self, "no input, skipping process");
+    gst_buffer_unref (outbuf);
+    return GST_FLOW_OK;
+  }
+
   self->inArgs->numBytes = self->in_size;
   self->inBufs->descs[0].bufSize.bytes = self->in_size;
 
