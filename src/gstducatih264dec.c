@@ -86,6 +86,8 @@ gst_ducati_h264dec_allocate_params (GstDucatiVidDec * self, gint params_sz,
     self->params->displayDelay = IVIDDEC3_DISPLAY_DELAY_AUTO;
     params->maxNumRefFrames = IH264VDEC_NUM_REFFRAMES_AUTO;
     params->pConstantMemory = 0;
+    params->presetLevelIdc = IH264VDEC_LEVEL41;
+    params->errConcealmentMode = IH264VDEC_APPLY_CONCEALMENT;
   }
 
   return ret;
