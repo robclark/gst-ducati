@@ -253,6 +253,7 @@ codec_unlock_outbuf (GstDucatiVidDec * self, XDAS_Int32 id)
 {
   GstBuffer *buf = (GstBuffer *) id;    // XXX use lookup table
   if (buf) {
+    GST_DEBUG_OBJECT (self, "free buffer: %d %p", id, buf);
     gst_buffer_unref (buf);
   }
 }
@@ -265,18 +266,30 @@ codec_process (GstDucatiVidDec * self, gboolean send, gboolean flush)
   GstBuffer *outbuf = NULL;
   gint i;
 
+  self->outArgs->outputID[0] = 0;
+  self->outArgs->freeBufID[0] = 0;
+
   t = gst_util_get_timestamp ();
   err = VIDDEC3_process (self->codec,
       self->inBufs, self->outBufs, self->inArgs, self->outArgs);
   GST_INFO_OBJECT (self, "%10dns", (gint) (gst_util_get_timestamp () - t));
+
   if (err) {
+    GST_WARNING_OBJECT (self, "err=%d, extendedError=%08x",
+        err, self->outArgs->extendedError);
+
+    err = VIDDEC3_control (self->codec, XDM_GETSTATUS,
+        self->dynParams, self->status);
+
+    GST_WARNING_OBJECT (self, "XDM_GETSTATUS: err=%d, extendedError=%08x",
+        err, self->status->extendedError);
+
     if (XDM_ISFATALERROR (self->outArgs->extendedError) || flush) {
-      return err;
+      /* we are processing for display and it is a non-fatal error, so lets
+       * try to recover.. otherwise return the error
+       */
+      err = XDM_EFAIL;
     }
-    /* we are processing for display and it is a non-fatal error, so lets
-     * try to recover..
-     */
-    err = XDM_EOK;
   }
 
   for (i = 0; self->outArgs->outputID[i]; i++) {
@@ -304,6 +317,7 @@ codec_process (GstDucatiVidDec * self, gboolean send, gboolean flush)
           i, outbuf, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (outbuf)));
       gst_pad_push (self->srcpad, outbuf);
     } else {
+      GST_DEBUG_OBJECT (self, "free buffer: %d %p", i, outbuf);
       gst_buffer_unref (outbuf);
     }
   }
@@ -323,6 +337,11 @@ codec_flush (GstDucatiVidDec * self, gboolean eos)
 
   GST_DEBUG_OBJECT (self, "flush: eos=%d", eos);
 
+  /* note: flush is synchronized against _chain() to avoid calling
+   * the codec from multiple threads
+   */
+  GST_PAD_STREAM_LOCK (self->sinkpad);
+
   if (G_UNLIKELY (self->first_in_buffer)) {
     return TRUE;
   }
@@ -336,18 +355,23 @@ codec_flush (GstDucatiVidDec * self, gboolean eos)
       self->dynParams, self->status);
   if (err) {
     GST_ERROR_OBJECT (self, "failed XDM_FLUSH");
-    return FALSE;
+    goto out;
   }
 
   do {
     err = codec_process (self, eos, TRUE);
   } while (err != XDM_EFAIL);
 
-  self->first_in_buffer = TRUE;
+  /* on a flush, it is normal (and not an error) for the last _process() call
+   * to return an error..
+   */
+  err = XDM_EOK;
 
+out:
+  GST_PAD_STREAM_UNLOCK (self->sinkpad);
   GST_DEBUG_OBJECT (self, "done");
 
-  return TRUE;
+  return !err;
 }
 
 /* GstDucatiVidDec vmethod default implementations */
