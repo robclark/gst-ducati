@@ -2,6 +2,7 @@ plugin_LTLIBRARIES = libgstducati.la
 
 # headers we need but don't want installed
 noinst_HEADERS = \
+	gstducatirvdec.h \
 	gstducativp7dec.h \
 	gstducativp6dec.h \
 	gstducativc1dec.h \
@@ -14,6 +15,7 @@ noinst_HEADERS = \
 
 # sources used to compile this plug-in
 libgstducati_la_SOURCES = \
+	gstducatirvdec.c \
 	gstducativp7dec.c \
 	gstducativp6dec.c \
 	gstducativc1dec.c \

@@ -412,8 +412,6 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   self->params->maxFrameRate = 30000;
   self->params->maxBitRate = 10000000;
 
-  //rv??
-
   self->params->dataEndianness = XDM_BYTE;
   self->params->forceChromaFormat = XDM_YUV_420SP;
   self->params->operatingMode = IVIDEO_DECODE_ONLY;

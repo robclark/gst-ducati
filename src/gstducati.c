@@ -30,6 +30,7 @@
 #include "gstducativc1dec.h"
 #include "gstducativp6dec.h"
 #include "gstducativp7dec.h"
+#include "gstducatirvdec.h"
 
 GST_DEBUG_CATEGORY (gst_ducati_debug);
 
@@ -46,7 +47,8 @@ plugin_init (GstPlugin * plugin)
       gst_element_register (plugin, "ducatimpeg2dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIMPEG2DEC) &&
       gst_element_register (plugin, "ducativc1dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIVC1DEC) &&
       gst_element_register (plugin, "ducativp6dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIVP6DEC) &&
-      gst_element_register (plugin, "ducativp7dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIVP7DEC);
+      gst_element_register (plugin, "ducativp7dec", GST_RANK_PRIMARY, GST_TYPE_DUCATIVP7DEC) &&
+      gst_element_register (plugin, "ducatirvdec", GST_RANK_PRIMARY, GST_TYPE_DUCATIRVDEC);
 }
 
 void *
