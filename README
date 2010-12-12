@@ -22,8 +22,8 @@ libdce (https://github.com/robclark/libdce) matching your kernel version.
 
 TODO
 ----
-+ realvideo
-+ fallbacks for sink elements not providing TILER buffers to decode into
-+ search the code for XXX or TODO ;-)
++ handle h264 avc format (in addition to just bytestream)
++ mjpeg
++ encoding
 
 
