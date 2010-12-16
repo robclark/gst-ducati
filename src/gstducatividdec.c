@@ -158,15 +158,6 @@ codec_create (GstDucatiVidDec * self)
     return FALSE;
   }
 
-#if 0
-  /* not entirely sure why we need to call this here.. just copying omx.. */
-  err = VIDDEC3_control(self->codec, XDM_GETBUFINFO, self->dynParams, self->status);
-  if (err) {
-    GST_ERROR_OBJECT (self, "failed XDM_GETBUFINFO");
-    return FALSE;
-  }
-#endif
-
   self->first_in_buffer = TRUE;
   self->first_out_buffer = TRUE;
 
@@ -357,6 +348,10 @@ codec_flush (GstDucatiVidDec * self, gboolean eos)
     GST_ERROR_OBJECT (self, "failed XDM_FLUSH");
     goto out;
   }
+
+  self->inBufs->descs[0].bufSize.bytes = 0;
+  self->inArgs->numBytes = 0;
+  self->inArgs->inputID = 0;
 
   do {
     err = codec_process (self, eos, TRUE);
