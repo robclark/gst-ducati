@@ -139,8 +139,8 @@ codec_create (GstDucatiVidDec * self)
   }
 
   /* these need to be set before VIDDEC3_create */
-  self->params->maxWidth = (self->width + 15) & ~0xf;   /* round up to MB */
-  self->params->maxHeight = (self->height + 15) & ~0xf; /* round up to MB */
+  self->params->maxWidth = self->width;
+  self->params->maxHeight = self->height;
 
   codec_name = GST_DUCATIVIDDEC_GET_CLASS (self)->codec_name;
 
@@ -375,9 +375,13 @@ static gboolean
 gst_ducati_viddec_parse_caps (GstDucatiVidDec * self, GstStructure * s)
 {
   const GValue *codec_data;
+  gint w, h;
 
-  if (gst_structure_get_int (s, "width", &self->width) &&
-      gst_structure_get_int (s, "height", &self->height)) {
+  if (gst_structure_get_int (s, "width", &w) &&
+      gst_structure_get_int (s, "height", &h)) {
+
+    self->width  = ALIGN2 (w, 4);      /* round up to MB */
+    self->height = ALIGN2 (h, 4);      /* round up to MB */
 
     const GValue *codec_data = gst_structure_get_value (s, "codec_data");
 
