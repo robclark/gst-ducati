@@ -20,8 +20,6 @@
 #ifndef __GST_DUCATIVP6DEC_H__
 #define __GST_DUCATIVP6DEC_H__
 
-#include <gst/gst.h>
-
 #include "gstducatividdec.h"
 
 #include <ti/sdo/codecs/vp6dec/ivp6vdec.h>

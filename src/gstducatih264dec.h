@@ -20,8 +20,6 @@
 #ifndef __GST_DUCATIH264DEC_H__
 #define __GST_DUCATIH264DEC_H__
 
-#include <gst/gst.h>
-
 #include "gstducatividdec.h"
 
 #include <ti/sdo/codecs/h264dec/ih264vdec.h>

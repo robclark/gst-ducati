@@ -21,9 +21,6 @@
 #  include <config.h>
 #endif
 
-#include <gst/gst.h>
-#include <gst/video/video.h>
-
 #include "gstducatividdec.h"
 
 GST_BOILERPLATE (GstDucatiVidDec, gst_ducati_viddec, GstElement,

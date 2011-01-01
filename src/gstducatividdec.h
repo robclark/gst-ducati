@@ -20,11 +20,10 @@
 #ifndef __GST_DUCATIVIDDEC_H__
 #define __GST_DUCATIVIDDEC_H__
 
-#include <gst/gst.h>
-
 #include "gstducati.h"
 #include "gstducatibufferpool.h"
 
+#include <gst/video/video.h>
 
 G_BEGIN_DECLS
 

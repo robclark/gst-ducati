@@ -20,8 +20,6 @@
 #ifndef __GST_DUCATIMPEG4DEC_H__
 #define __GST_DUCATIMPEG4DEC_H__
 
-#include <gst/gst.h>
-
 #include "gstducatividdec.h"
 
 #include <ti/sdo/codecs/mpeg4dec/impeg4vdec.h>

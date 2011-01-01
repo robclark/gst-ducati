@@ -34,9 +34,6 @@
 #  include <config.h>
 #endif
 
-#include <gst/gst.h>
-#include <gst/video/video.h>
-
 #include "gstducatimpeg2dec.h"
 
 GST_BOILERPLATE (GstDucatiMpeg2Dec, gst_ducati_mpeg2dec, GstDucatiVidDec,

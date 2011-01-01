@@ -23,8 +23,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <gst/gst.h>
-
 #include <tiler.h>
 #include <tilermem.h>
 #include <memmgr.h>
@@ -32,6 +30,8 @@
 #include <xdc/std.h>
 #include <ti/sdo/ce/Engine.h>
 #include <ti/sdo/ce/video3/viddec3.h>
+
+#include <gst/gst.h>
 
 G_BEGIN_DECLS
 

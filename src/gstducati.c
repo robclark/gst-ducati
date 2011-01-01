@@ -21,8 +21,6 @@
 #  include <config.h>
 #endif
 
-#include <gst/gst.h>
-
 #include "gstducati.h"
 #include "gstducatih264dec.h"
 #include "gstducatimpeg4dec.h"

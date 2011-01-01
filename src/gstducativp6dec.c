@@ -34,9 +34,6 @@
 #  include <config.h>
 #endif
 
-#include <gst/gst.h>
-#include <gst/video/video.h>
-
 #include "gstducativp6dec.h"
 
 
