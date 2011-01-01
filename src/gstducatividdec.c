@@ -32,6 +32,12 @@ static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV_STRIDED ("NV12", "[ 0, max ]"))
     );
 
+enum
+{
+  PROP_0,
+  PROP_VERSION,
+};
+
 /* helper functions */
 
 static void
@@ -377,8 +383,20 @@ gst_ducati_viddec_parse_caps (GstDucatiVidDec * self, GstStructure * s)
   if (gst_structure_get_int (s, "width", &w) &&
       gst_structure_get_int (s, "height", &h)) {
 
-    self->width  = ALIGN2 (w, 4);      /* round up to MB */
-    self->height = ALIGN2 (h, 4);      /* round up to MB */
+    h = ALIGN2 (w, 4);                 /* round up to MB */
+    w = ALIGN2 (h, 4);                 /* round up to MB */
+
+    /* if we've already created codec, but the resolution has changed, we
+     * need to re-create the codec:
+     */
+    if (G_UNLIKELY (self->codec)) {
+      if ((h != self->height) || (w != self->width)) {
+        codec_delete (self);
+      }
+    }
+
+    self->width  = w;
+    self->height = h;
 
     const GValue *codec_data = gst_structure_get_value (s, "codec_data");
 
@@ -715,6 +733,55 @@ leave:
 
 /* GObject vmethod implementations */
 
+#define VERSION_LENGTH 256
+
+static void
+gst_ducati_viddec_get_property (GObject * obj,
+    guint prop_id, GValue * value, GParamSpec * pspec)
+{
+  GstDucatiVidDec *self = GST_DUCATIVIDDEC (obj);
+
+  switch (prop_id) {
+    case PROP_VERSION: {
+      int err;
+      char *version = gst_ducati_alloc_1d (VERSION_LENGTH);
+
+      /* in case something fails: */
+      snprintf (version, VERSION_LENGTH, "unsupported");
+
+      if (! self->engine)
+        engine_open (self);
+
+      if (! self->codec)
+        codec_create (self);
+
+      if (self->codec) {
+        self->status->data.buf = (XDAS_Int8 *) TilerMem_VirtToPhys (version);
+        self->status->data.bufSize = VERSION_LENGTH;
+
+        err = VIDDEC3_control (self->codec, XDM_GETVERSION,
+            self->dynParams, self->status);
+        if (err) {
+          GST_ERROR_OBJECT (self, "failed XDM_GETVERSION");
+        }
+
+        self->status->data.buf = NULL;
+        self->status->data.bufSize = 0;
+      }
+
+      g_value_set_string (value, version);
+
+      MemMgr_Free (version);
+
+      break;
+    }
+    default: {
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
+      break;
+    }
+  }
+}
+
 static void
 gst_ducati_viddec_finalize (GObject * obj)
 {
@@ -746,8 +813,12 @@ gst_ducati_viddec_class_init (GstDucatiVidDecClass * klass)
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
   GstElementClass *gstelement_class = GST_ELEMENT_CLASS (klass);
 
-  gobject_class->finalize = gst_ducati_viddec_finalize;
-  gstelement_class->change_state = gst_ducati_viddec_change_state;
+  gobject_class->get_property =
+      GST_DEBUG_FUNCPTR (gst_ducati_viddec_get_property);
+  gobject_class->finalize =
+      GST_DEBUG_FUNCPTR (gst_ducati_viddec_finalize);
+  gstelement_class->change_state =
+      GST_DEBUG_FUNCPTR (gst_ducati_viddec_change_state);
 
   klass->parse_caps =
       GST_DEBUG_FUNCPTR (gst_ducati_viddec_parse_caps);
@@ -755,6 +826,11 @@ gst_ducati_viddec_class_init (GstDucatiVidDecClass * klass)
       GST_DEBUG_FUNCPTR (gst_ducati_viddec_allocate_params);
   klass->push_input =
       GST_DEBUG_FUNCPTR (gst_ducati_viddec_push_input);
+
+  g_object_class_install_property (gobject_class, PROP_VERSION,
+      g_param_spec_string ("version", "Version",
+          "The codec version string", "",
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -779,4 +855,10 @@ gst_ducati_viddec_init (GstDucatiVidDec * self, GstDucatiVidDecClass * klass)
 
   gst_element_add_pad (GST_ELEMENT (self), self->sinkpad);
   gst_element_add_pad (GST_ELEMENT (self), self->srcpad);
+
+  /* sane defaults in case we need to create codec without caps negotiation
+   * (for example, to get 'version' property)
+   */
+  self->width = 128;
+  self->height = 128;
 }
