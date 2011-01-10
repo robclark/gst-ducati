@@ -105,7 +105,7 @@ gst_ducati_rvdec_allocate_params (GstDucatiVidDec * vdec, gint params_sz,
       sizeof (IrealVDEC_OutArgs));
 
   if (ret) {
-    IrealVDEC_Params *params = (IrealVDEC_Params *) vdec->params;
+    /*IrealVDEC_Params *params = (IrealVDEC_Params *) vdec->params;*/
     vdec->params->displayDelay = IVIDDEC3_DISPLAY_DELAY_1;
     vdec->dynParams->newFrameFlag = FALSE;
     vdec->dynParams->lateAcquireArg = -1;
@@ -136,9 +136,9 @@ gst_ducati_rvdec_push_input (GstDucatiVidDec * vdec, GstBuffer * buf)
 
     /* stream type */
     if (self->rmversion == 3) {
-      push_input (vdec, "VIDORV30", 8);
+      push_input (vdec, (guint8 *)"VIDORV30", 8);
     } else if (self->rmversion == 4) {
-      push_input (vdec, "VIDORV40", 8);
+      push_input (vdec, (guint8 *)"VIDORV40", 8);
     }
 
     /* horiz x vert resolution */
