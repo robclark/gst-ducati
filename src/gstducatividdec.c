@@ -383,8 +383,8 @@ gst_ducati_viddec_parse_caps (GstDucatiVidDec * self, GstStructure * s)
   if (gst_structure_get_int (s, "width", &w) &&
       gst_structure_get_int (s, "height", &h)) {
 
-    h = ALIGN2 (w, 4);                 /* round up to MB */
-    w = ALIGN2 (h, 4);                 /* round up to MB */
+    h = ALIGN2 (h, 4);                 /* round up to MB */
+    w = ALIGN2 (w, 4);                 /* round up to MB */
 
     /* if we've already created codec, but the resolution has changed, we
      * need to re-create the codec:
