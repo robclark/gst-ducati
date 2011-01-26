@@ -85,6 +85,7 @@ gst_ducati_h264dec_allocate_params (GstDucatiVidDec * self, gint params_sz,
     params->pConstantMemory = 0;
     params->presetLevelIdc = IH264VDEC_LEVEL41;
     params->errConcealmentMode = IH264VDEC_APPLY_CONCEALMENT;
+    params->temporalDirModePred = TRUE;
   }
 
   return ret;
