@@ -74,7 +74,7 @@ gst_ducati_mpeg2dec_allocate_params (GstDucatiVidDec * self, gint params_sz,
       sizeof (IMPEG2VDEC_OutArgs));
 
   if (ret) {
-    IMPEG2VDEC_Params *params = (IMPEG2VDEC_Params *) self->params;
+//    IMPEG2VDEC_Params *params = (IMPEG2VDEC_Params *) self->params;
     self->params->displayDelay = IVIDDEC3_DISPLAY_DELAY_AUTO;
   }
 

@@ -176,7 +176,7 @@ gst_ducati_bufferpool_get (GstDucatiBufferPool * self, GstBuffer * orig)
 {
   GstDucatiBuffer *buf = NULL;
 
-  g_return_if_fail (self);
+  g_return_val_if_fail (self, NULL);
 
   GST_DUCATI_BUFFERPOOL_LOCK (self);
   if (self->running) {

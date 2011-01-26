@@ -27,9 +27,6 @@
 
 G_BEGIN_DECLS
 
-// XXX move these
-GST_DEBUG_CATEGORY_EXTERN (gst_ducati_debug);
-
 
 #define GST_TYPE_DUCATIVIDDEC               (gst_ducati_viddec_get_type())
 #define GST_DUCATIVIDDEC(obj)               (G_TYPE_CHECK_INSTANCE_CAST((obj), GST_TYPE_DUCATIVIDDEC, GstDucatiVidDec))

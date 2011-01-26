@@ -39,7 +39,14 @@ AC_CONFIG_MACRO_DIR([m4])
 dnl initialize GStreamer macros
 AG_GST_INIT
 dnl define an ERROR_CFLAGS Makefile variable
-AG_GST_SET_ERROR_CFLAGS($GST_CVS)
+AG_GST_SET_ERROR_CFLAGS($GST_GIT, [
+    -Wmissing-declarations -Wmissing-prototypes -Wredundant-decls
+    -Wwrite-strings -Wformat-nonliteral -Wformat-security -Wold-style-definition
+    -Winit-self -Wmissing-include-dirs -Waddress
+    -Waggregate-return -Wno-multichar])
+
+dnl define correct level for debugging messages
+AG_GST_SET_LEVEL_DEFAULT($GST_GIT)
 
 dnl set up gettext
 dnl the version check needs to stay here because autopoint greps for it
@@ -108,7 +115,7 @@ DEPRECATED_CFLAGS="-DGST_DISABLE_DEPRECATED"
 AC_SUBST(DEPRECATED_CFLAGS)
 
 dnl every flag in GST_OPTION_CFLAGS can be overridden at make time
-GST_OPTION_CFLAGS="\$(ERROR_CFLAGS) \$(DEBUG_CFLAGS) \$(PROFILE_CFLAGS) \$(GCOV_CFLAGS) \$(OPT_CFLAGS) \$(DEPRECATED_CFLAGS)"
+GST_OPTION_CFLAGS="\$(WARNING_CFLAGS) \$(ERROR_CFLAGS) \$(DEBUG_CFLAGS) \$(PROFILE_CFLAGS) \$(GCOV_CFLAGS) \$(OPT_CFLAGS) \$(DEPRECATED_CFLAGS)"
 AC_SUBST(GST_OPTION_CFLAGS)
 
 dnl our libraries need to be versioned correctly
@@ -118,7 +125,7 @@ dnl FIXME: do we want to rename to GST_ALL_* ?
 dnl prefer internal headers to already installed ones
 dnl also add builddir include for enumtypes and marshal
 dnl add GST_OPTION_CFLAGS, but overridable
-GST_CFLAGS="-I\$(top_srcdir)/gst-libs -I\$(top_builddir)/gst-libs $GST_CFLAGS \$(GST_OPTION_CFLAGS)"
+GST_CFLAGS="$GST_CFLAGS \$(GST_OPTION_CFLAGS)"
 AC_SUBST(GST_CFLAGS)
 AC_SUBST(GST_LIBS)
 

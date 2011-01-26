@@ -98,7 +98,6 @@ static gboolean
 gst_ducati_rvdec_allocate_params (GstDucatiVidDec * vdec, gint params_sz,
     gint dynparams_sz, gint status_sz, gint inargs_sz, gint outargs_sz)
 {
-  GstDucatiRVDec *self = GST_DUCATIRVDEC (vdec);
   gboolean ret = parent_class->allocate_params (vdec,
       sizeof (IrealVDEC_Params), sizeof (IrealVDEC_DynamicParams),
       sizeof (IrealVDEC_Status), sizeof (IrealVDEC_InArgs),

@@ -95,7 +95,7 @@ engine_open (GstDucatiVidDec * self)
 
   GST_DEBUG_OBJECT (self, "opening engine");
 
-  self->engine = Engine_open ("ivahd_vidsvr", NULL, NULL);
+  self->engine = Engine_open ((String)"ivahd_vidsvr", NULL, NULL);
   if (G_UNLIKELY (!self->engine)) {
     GST_ERROR_OBJECT (self, "could not create engine");
     return FALSE;
@@ -149,7 +149,7 @@ codec_create (GstDucatiVidDec * self)
 
   /* create codec: */
   GST_DEBUG_OBJECT (self, "creating codec: %s", codec_name);
-  self->codec = VIDDEC3_create (self->engine, (char *)codec_name, self->params);
+  self->codec = VIDDEC3_create (self->engine, (String)codec_name, self->params);
 
   if (!self->codec) {
     return FALSE;
@@ -398,7 +398,7 @@ gst_ducati_viddec_parse_caps (GstDucatiVidDec * self, GstStructure * s)
     self->width  = w;
     self->height = h;
 
-    const GValue *codec_data = gst_structure_get_value (s, "codec_data");
+    codec_data = gst_structure_get_value (s, "codec_data");
 
     if (codec_data) {
       GstBuffer *buffer = gst_value_get_buffer (codec_data);
@@ -474,6 +474,8 @@ gst_ducati_viddec_allocate_params (GstDucatiVidDec * self, gint params_sz,
   }
   self->inArgs->size = inargs_sz;
   self->outArgs->size = outargs_sz;
+
+  return TRUE;
 }
 
 static GstBuffer *
@@ -568,6 +570,8 @@ static gboolean
 gst_ducati_viddec_query (GstPad * pad, GstQuery * query)
 {
   GstDucatiVidDec *self = GST_DUCATIVIDDEC (GST_OBJECT_PARENT (pad));
+
+  GST_DEBUG_OBJECT (self, "query: %"GST_PTR_FORMAT, query);
 
   switch (GST_QUERY_TYPE (query)) {
     case GST_QUERY_BUFFERS:
